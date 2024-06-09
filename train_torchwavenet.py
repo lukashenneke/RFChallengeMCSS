@@ -17,16 +17,18 @@ interference = ['EMISignal1', 'CommSignal2', 'CommSignal3', 'CommSignal5G1']
 
 def main():
     parser = ArgumentParser(description="Train a Diffwave model.")
-    parser.add_argument("--soi", type=int, required=True, help="Index for SOI Type.")
-    parser.add_argument("--interf", type=int, required=True, help="Index for Interference Type.")
-    parser.add_argument("--nch", type=int, default=1, help="Number of channels/antennas.")
+    parser.add_argument("soi", type=str, default="QPSK", choices=soi, help="Index for SOI Type.")
+    parser.add_argument("interference", type=str, default="CommSignal3", choices=interference, help="Index for Interference Type.")
+    parser.add_argument("nchannels", type=int, default=1, help="Number of channels/antennas.")
+    parser.add_argument("-id", "--identifier", type=str, default="wavenet", help="Number of channels/antennas.")
     parser.add_argument("--config", type=str, default="src/configs/wavenet.yml", help="Configuration file for model.")
     args = parser.parse_args()
     
     # Set config
-    s = soi[args.soi]
-    i = interference[args.interf]
-    n = args.nch
+    s = args.soi
+    i = args.interference
+    n = args.nchannels
+    m = args.identifier
     cfg = OmegaConf.load(args.config)
     cfg = Config(**parse_configs(cfg))
     ddir = Path(cfg.data.data_dir)
@@ -34,10 +36,13 @@ def main():
     cfg.data.val_data_dir = str(ddir / f"testset1_frame/{i}_test1_raw_data.h5")
     cfg.data.num_ant = n
     cfg.model.input_channels = 2*n
-    cfg.model_dir = f"torchmodels/{s}_{i}_{n}ch_wavenet"
+    cfg.model_dir = f"models/{s}_{i}_{n}ch_{m}"
     
     # Setup training
-    train(cfg, SOI_Generator(s))
+    if m == "wavenet":
+        train(cfg, SOI_Generator(s))
+    else:
+        raise ValueError(f'Unknown model identifier {m}')
 
 class SOI_Generator:
     def __init__(self, soi_type):
@@ -53,6 +58,4 @@ class SOI_Generator:
             return rfcutils.generate_qpsk2_signal(n, s_len//4)
         
 if __name__ == "__main__":
-    import sys
-    sys.argv += ["--soi", "0", "--interf", "2", "--nch", "1"]
     main()

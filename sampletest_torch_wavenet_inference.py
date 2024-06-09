@@ -120,7 +120,7 @@ if __name__ == "__main__":
         all_sig1 = np.array(hf.get('soi'))
         all_bits1 = np.array(hf.get('bits'))
 
-    nn_model = load_model(id_string, n_channels, os.path.join('torchmodels', f'{soi_type}_{interference_sig_type}_{n_channels}ch_{id_string}', 'weights.pt'))
+    nn_model = load_model(id_string, n_channels, os.path.join('models', f'{soi_type}_{interference_sig_type}_{n_channels}ch_{id_string}', 'weights.pt'))
     mse_ber = []
     for i in range(ang.shape[0] if n_channels>1 else 1):
         print('Subset', i)
