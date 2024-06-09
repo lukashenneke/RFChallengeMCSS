@@ -1,38 +1,9 @@
-import os, sys, h5py
+import os, sys
 import numpy as np
 import matplotlib.pyplot as plt
 
 all_sinr = np.arange(-30, 0.1, 3)
 n_per_batch = 100
-
-def run_demod_test(sig1_est, bit1_est, soi_type, interference_sig_type, testset_identifier):
-    # For SampleEvalSet
-    with h5py.File(os.path.join('dataset', f'{testset_identifier}_Dataset_{soi_type}_{interference_sig_type}.h5'), 'r') as hf:
-        all_sig1 = np.array(hf.get('soi'))
-        all_bits1 = np.array(hf.get('bits'))
-    
-    # Evaluation pipeline
-    def eval_mse(all_sig_est, all_sig_soi):
-        assert all_sig_est.shape == all_sig_soi.shape, 'Invalid SOI estimate shape'
-        return np.mean(np.abs(all_sig_est - all_sig_soi)**2, axis=1)
-    
-    def eval_ber(bit_est, bit_true):
-        ber = np.sum((bit_est != bit_true).astype(np.float32), axis=1) / bit_true.shape[1]
-        assert bit_est.shape == bit_true.shape, 'Invalid bit estimate shape'
-        return ber
-
-    all_mse, all_ber = [], [] 
-    for idx, sinr in enumerate(all_sinr):
-        batch_mse =  eval_mse(sig1_est[idx*n_per_batch:(idx+1)*n_per_batch], all_sig1[idx*n_per_batch:(idx+1)*n_per_batch])
-        bit_true_batch = all_bits1[idx*n_per_batch:(idx+1)*n_per_batch]
-        batch_ber = eval_ber(bit1_est[idx*n_per_batch:(idx+1)*n_per_batch], bit_true_batch)
-        all_mse.append(batch_mse)
-        all_ber.append(batch_ber)
-
-    all_mse, all_ber = np.array(all_mse), np.array(all_ber)
-    mse_mean = 10*np.log10(np.mean(all_mse, axis=-1))
-    ber_mean = np.mean(all_ber, axis=-1)
-    return mse_mean, ber_mean
 
 def run_evaluation(testset_identifier, soi_identifier, interference_identifier):
     if isinstance(soi_identifier, str): soi_identifier = [soi_identifier]
@@ -42,15 +13,13 @@ def run_evaluation(testset_identifier, soi_identifier, interference_identifier):
     for soi_type in soi_identifier:
         for interference_sig_type in interference_identifier:
             all_mse, all_ber, all_scores = {}, {}, {}
-            for id_string in ['default', 'wavenet', 'soi-ae']:
+            for id_string in ['baseline', 'wavenet', 'sq_wavenet', 'soi-ae']:
                 for nch in [1, 2, 4]:
                     try:
-                        sig1_est = np.load(os.path.join('outputs', f'{id_string}_{testset_identifier}_estimated_soi_{soi_type}_{interference_sig_type}_{nch}ch.npy'))
+                        results = np.load(os.path.join('outputs', f'{id_string}_{testset_identifier}_{soi_type}_{interference_sig_type}_{nch}ch_results.npy'))
                     except FileNotFoundError:
                         continue
-                    bit1_est = np.load(os.path.join('outputs', f'{id_string}_{testset_identifier}_estimated_bits_{soi_type}_{interference_sig_type}_{nch}ch.npy')) # _output_bits_ _estimated_bits_
-                    
-                    mse_mean, ber_mean = run_demod_test(sig1_est, bit1_est, soi_type, interference_sig_type, testset_identifier)
+                    mse_mean, ber_mean = results[0], results[1]
                     
                     id_string_ch = f'{id_string}_{nch}ch'
                     all_mse[id_string_ch] = mse_mean
@@ -61,7 +30,7 @@ def run_evaluation(testset_identifier, soi_identifier, interference_identifier):
                     ber_score = -(sum(ber_mean < 1e-2)-1)*3
                     all_scores[id_string_ch] = (mse_score, ber_score)
 
-            if len(all_scores) == 0: continue
+            if len(all_scores) <= 1: continue
             comb = f'{soi_type}_{interference_sig_type}'
             keep_scores[comb] = all_scores
             print('===', comb, '===')

@@ -5,7 +5,6 @@ import numpy as np
 import random
 import h5py
 from tqdm import tqdm
-import pickle
 
 import rfcutils
 import tensorflow as tf
@@ -19,6 +18,7 @@ get_sinr_db = lambda s, i: get_db(get_sinr(s,i))
 
 sig_len = 40960
 n_per_batch = 100
+n_angles = 10
 all_sinr = np.arange(-30, 0.1, 3)
 
 seed_number = 0
@@ -91,11 +91,10 @@ def generate_demod_testmixture(soi_type, interference_sig_type):
     meta_data = np.concatenate(meta_data, axis=1).T
     all_interferences = all_sig_mixture - all_sig1
     
-    angles = ArrayReceiver.get_random_angles(2 * n_per_batch)
-    angles = np.reshape(angles, (-1, 2, 2)) # batch, soi/difference, azimuth/elevation
-    angles = np.tile(angles, (len(all_sinr), 1, 1))
-    angles[:,:,1] = 0 # no elevation
-    angles[:,1,0] += angles[:,0,0] # equally distributed difference in azimuth 
+    angles = ArrayReceiver.get_random_angles(2*n_per_batch*n_angles) #*len(all_sinr)
+    angles = np.reshape(angles, (-1, n_angles, 2, 2)) # batch, soi/interference, azimuth/elevation
+    angles = np.tile(angles, (len(all_sinr), 1, 1, 1))
+    angles = np.transpose(angles, (1,0,2,3))
     
     with h5py.File(os.path.join('dataset', f'TestSet1Example_Dataset_{soi_type}_{interference_sig_type}.h5'), 'w') as hf:
         hf.create_dataset('soi_type', data=soi_type.encode('UTF-8'))
@@ -107,4 +106,8 @@ def generate_demod_testmixture(soi_type, interference_sig_type):
         hf.create_dataset('meta_data', data=meta_data)
 
 if __name__ == "__main__":
-    generate_demod_testmixture(sys.argv[1], sys.argv[2])
+    soi = [sys.argv[1]] if len(sys.argv) > 1 else ['QPSK', 'OFDMQPSK']
+    interference = [sys.argv[2]] if len(sys.argv) > 2 else ['EMISignal1', 'CommSignal2', 'CommSignal3', 'CommSignal5G1']
+    for s in soi:
+        for i in interference:
+            generate_demod_testmixture(s,i)
