@@ -106,13 +106,5 @@ def generate_demod_testmixture(soi_type, interference_sig_type):
         hf.create_dataset('angles', data=angles)
         hf.create_dataset('meta_data', data=meta_data)
 
-    with h5py.File(os.path.join('dataset', f'TestSet1Example_Dataset_{soi_type}_{interference_sig_type}.h5'), 'r') as hf:
-        li = np.array(hf.get('interferences'))
-        ls = np.array(hf.get('soi'))
-        print(hf.get('soi_type')[()].decode('UTF-8'), hf.get('interference_sig_type')[()].decode('UTF-8'))
-
-    #res = np.load(f'dataset/TestSet1Example/TestSet1Example_testmixture_{soi_type}_{interference_sig_type}.npy')
-    #print('Check:', np.allclose(li+ls, res))
-
 if __name__ == "__main__":
     generate_demod_testmixture(sys.argv[1], sys.argv[2])
