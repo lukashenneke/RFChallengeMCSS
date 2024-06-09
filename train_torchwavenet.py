@@ -1,72 +1,58 @@
-import socketserver
-import sys
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+import torch
+import tensorflow as tf
+tf.config.set_visible_devices([], 'GPU')
 
 from argparse import ArgumentParser
 from omegaconf import OmegaConf
-from torch.cuda import device_count
-from torch.multiprocessing import spawn
-from typing import List
+from pathlib import Path
 
+import rfcutils
 from src.config_torchwavenet import Config, parse_configs
-from src.learner_torchwavenet import train, train_distributed
+from src.learner_torchwavenet import train
 
+soi = ['QPSK', 'OFDMQPSK', 'QAM16', 'QPSK2']
+interference = ['EMISignal1', 'CommSignal2', 'CommSignal3', 'CommSignal5G1']
 
-def _get_free_port():
-    with socketserver.TCPServer(('localhost', 0), None) as s:
-        return s.server_address[1]
-
-all_datasets = ['QPSK_CommSignal2', 'QPSK2_CommSignal2', 'QAM16_CommSignal2', 'OFDMQPSK_CommSignal2',
-                'QPSK_CommSignal3', 'QPSK2_CommSignal3', 'QAM16_CommSignal3', 'OFDMQPSK_CommSignal3', 'CommSignal2_CommSignal3',
-                'QPSK_EMISignal1', 'QPSK2_EMISignal1', 'QAM16_EMISignal1', 'OFDMQPSK_EMISignal1', 'CommSignal2_EMISignal1',
-                'QPSK_CommSignal5G1', 'QPSK2_CommSignal5G1', 'QAM16_CommSignal5G1', 'OFDMQPSK_CommSignal5G1', 'CommSignal2_CommSignal5G1']
-
-def main(argv: List[str]):
+def main():
     parser = ArgumentParser(description="Train a Diffwave model.")
-    parser.add_argument("--sigindex", type=int, required=True,
-                        help="Index for Mixture Type.")
-    parser.add_argument("--config", type=str, default="src/configs/wavenet.yml",
-                        help="Configuration file for model.")
-    args = parser.parse_args(argv[1:-1])
+    parser.add_argument("--soi", type=int, required=True, help="Index for SOI Type.")
+    parser.add_argument("--interf", type=int, required=True, help="Index for Interference Type.")
+    parser.add_argument("--nch", type=int, default=1, help="Number of channels/antennas.")
+    parser.add_argument("--config", type=str, default="src/configs/wavenet.yml", help="Configuration file for model.")
+    args = parser.parse_args()
     
-    sigtype = all_datasets[args.sigindex]
-    # First create the base config
+    # Set config
+    s = soi[args.soi]
+    i = interference[args.interf]
+    n = args.nch
     cfg = OmegaConf.load(args.config)
-    cli_cfg = OmegaConf.from_cli(
-        argv[-1].split("::")) if argv[-1] != "" else None
-    cfg: Config = Config(**parse_configs(cfg, cli_cfg))
-    cfg.data.root_dir = f"npydataset/Dataset_{sigtype}_Mixture"
-    cfg.model_dir = f"torchmodels/dataset_{sigtype.lower()}_mixture_wavenet"
+    cfg = Config(**parse_configs(cfg))
+    ddir = Path(cfg.data.data_dir)
+    cfg.data.data_dir = str(ddir / f"interferenceset_frame/{i}_raw_data.h5")
+    cfg.data.val_data_dir = str(ddir / f"testset1_frame/{i}_test1_raw_data.h5")
+    cfg.data.num_ant = n
+    cfg.model.input_channels = 2*n
+    cfg.model_dir = f"torchmodels/{s}_{i}_{n}ch_wavenet"
     
     # Setup training
-    world_size = device_count()
-    if world_size != cfg.distributed.world_size:
-        raise ValueError(
-            "Requested world size is not the same as number of visible GPUs.")
-    if cfg.distributed.distributed:
-        if world_size < 2:
-            raise ValueError(
-                "Distributed training cannot be run on machine"
-                f" with {world_size} device(s)."
-            )
-        if cfg.data.batch_size % world_size != 0:
-            raise ValueError(
-                f"Batch size {cfg.data.batch_size} is not evenly"
-                f" divisble by # GPUs = {world_size}."
-            )
-        cfg.data.batch_size = cfg.data.batch_size // world_size
-        port = _get_free_port()
-        spawn(
-            train_distributed, 
-            args=(world_size, port, cfg), 
-            nprocs=world_size, 
-            join=True
-        )
-    else:
-        train(cfg)
+    train(cfg, SOI_Generator(s))
 
-
+class SOI_Generator:
+    def __init__(self, soi_type):
+        self.soi_type = soi_type
+    def __call__(self, n, s_len):
+        if self.soi_type == 'QPSK':
+            return rfcutils.generate_qpsk_signal(n, s_len//16)
+        elif self.soi_type == 'OFDMQPSK':
+            return rfcutils.generate_ofdm_signal(n, s_len//80)
+        elif self.soi_type == 'QAM16':
+            return rfcutils.generate_qam16_signal(n, s_len//16)
+        elif self.soi_type == 'QPSK2':
+            return rfcutils.generate_qpsk2_signal(n, s_len//4)
+        
 if __name__ == "__main__":
-    argv = sys.argv
-    if len(sys.argv) == 3:
-        argv = argv + [""]
-    main(argv)
+    import sys
+    sys.argv += ["--soi", "0", "--interf", "2", "--nch", "1"]
+    main()

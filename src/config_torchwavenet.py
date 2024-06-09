@@ -1,6 +1,6 @@
-from dataclasses import MISSING, asdict, dataclass
+from dataclasses import MISSING, asdict, dataclass, field
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 
 from omegaconf import DictConfig, OmegaConf
 
@@ -11,6 +11,7 @@ OmegaConf.register_new_resolver(
 @dataclass
 class ModelConfig:
     input_channels: int = 2
+    output_channels: int = 2
     residual_layers: int = 30
     residual_channels: int = 64
     dilation_cycle_length: int = 10
@@ -18,16 +19,14 @@ class ModelConfig:
 
 @dataclass
 class DataConfig:
-    root_dir: str = MISSING
+    data_dir: str = MISSING
+    val_data_dir: str = MISSING
+    sig_len: int = 40960
+    num_ant: int = 1
+    sinr_range: List[int] = field(default_factory=lambda: [-30, 0])
+    soi_aoa: Optional[List[float]] = None #[np.pi/4,0] #
     batch_size: int = 16
-    num_workers: int = 4
-    train_fraction: float = 0.8
-
-
-@dataclass
-class DistributedConfig:
-    distributed: bool = False
-    world_size: int = 2
+    num_workers: int = 2
 
 
 @dataclass
@@ -47,8 +46,7 @@ class Config:
     model_dir: str = MISSING
 
     model: ModelConfig = ModelConfig()
-    data: DataConfig = DataConfig(root_dir="")
-    distributed: DistributedConfig = DistributedConfig()
+    data: DataConfig = DataConfig(data_dir="", val_data_dir="")
     trainer: TrainerConfig = TrainerConfig()
 
 

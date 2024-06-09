@@ -62,7 +62,7 @@ class Wave(nn.Module):
         self.skip_projection = Conv1d(
             cfg.residual_channels, cfg.residual_channels, 1)
         self.output_projection = Conv1d(
-            cfg.residual_channels, cfg.input_channels, 1)
+            cfg.residual_channels, cfg.output_channels, 1)
         nn.init.zeros_(self.output_projection.weight)
 
     def forward(self, input):
