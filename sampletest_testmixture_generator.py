@@ -92,8 +92,10 @@ def generate_demod_testmixture(soi_type, interference_sig_type):
     all_interferences = all_sig_mixture - all_sig1
     
     angles = ArrayReceiver.get_random_angles(2 * n_per_batch)
-    angles = np.reshape(angles, (-1, 2, 2)) # batch, soi/interference, azimuth/elevation
+    angles = np.reshape(angles, (-1, 2, 2)) # batch, soi/difference, azimuth/elevation
     angles = np.tile(angles, (len(all_sinr), 1, 1))
+    angles[:,:,1] = 0 # no elevation
+    angles[:,1,0] += angles[:,0,0] # equally distributed difference in azimuth 
     
     with h5py.File(os.path.join('dataset', f'TestSet1Example_Dataset_{soi_type}_{interference_sig_type}.h5'), 'w') as hf:
         hf.create_dataset('soi_type', data=soi_type.encode('UTF-8'))
