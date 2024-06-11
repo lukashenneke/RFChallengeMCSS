@@ -74,26 +74,19 @@ class ArrayReceiver:
         # normalized antenna positions with lambda/2 spacing
         # x, y, z components
         spc = 0.5
-        if N == 1:
-            self.ant_pos = np.array([[0, 0, 0]], dtype=np.float32)
-        elif N == 2: 
-            self.ant_pos = np.array(
-                [[   0, 0, 0], 
-                 [ spc, 0, 0]], dtype=np.float32
-            )
+        array = 'ULA'
+        if array == 'ULA':
+            self.ant_pos = np.zeros((N,3), dtype=np.float32)
+            self.ant_pos[:,0] = np.arange(N) * spc 
         elif N == 4:
-            #self.ant_pos = np.array(
-            #    [[  0,   0, 0],
-            #     [spc,   0, 0],
-            #     [spc, spc, 0],
-            #     [  0, spc, 0]], dtype=np.float32
-            #)
             self.ant_pos = np.array(
                 [[  0,   0, 0],
-                 [spc,   0, 0],
-                 [2*spc, 0, 0],
-                 [3*spc, 0, 0]], dtype=np.float32
+                [spc,   0, 0],
+                [spc, spc, 0],
+                [  0, spc, 0]], dtype=np.float32
             )
+        else:
+            raise ValueError(f'No {array} antenna pattern implemented for N={N} elements')
     
     def get_steering_vectors(self, angles):
         '''

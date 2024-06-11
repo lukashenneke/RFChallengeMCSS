@@ -6,14 +6,11 @@ all_sinr = np.arange(-30, 0.1, 3)
 n_per_batch = 100
 
 def run_evaluation(testset_identifier, soi_identifier, interference_identifier):
-    if isinstance(soi_identifier, str): soi_identifier = [soi_identifier]
-    if isinstance(interference_identifier, str): interference_identifier = [interference_identifier]
-    
     keep_scores = {}
     for soi_type in soi_identifier:
         for interference_sig_type in interference_identifier:
             all_mse, all_ber, all_scores = {}, {}, {}
-            for id_string in ['baseline', 'wavenet', 'sq_wavenet', 'soi-ae']:
+            for id_string in ['wavenet', 'bf', 'bf+wavenet']: # 'baseline', 'bf-oracle', 'soi-ae', 
                 for nch in [1, 2, 4]:
                     try:
                         results = np.load(os.path.join('outputs', f'{id_string}_{testset_identifier}_{soi_type}_{interference_sig_type}_{nch}ch_results.npy'))
@@ -69,8 +66,8 @@ def run_evaluation(testset_identifier, soi_identifier, interference_identifier):
     for k,v in final_score.items(): print(k, v)
 
 if __name__ == "__main__":
-    soi_type = sys.argv[1] if len(sys.argv) > 1 else ['QPSK', 'OFDMQPSK']
-    interference_sig_type = sys.argv[2] if len(sys.argv) > 2 else ['EMISignal1', 'CommSignal2', 'CommSignal3', 'CommSignal5G1']
+    soi_type = [sys.argv[1]] if len(sys.argv) > 1 else ['QPSK', 'OFDMQPSK']
+    interference_sig_type = [sys.argv[2]] if len(sys.argv) > 2 else ['EMISignal1', 'CommSignal2', 'CommSignal3', 'CommSignal5G1']
     testset_identifier = sys.argv[3] if len(sys.argv) > 3 else 'TestSet1Example'
 
     run_evaluation(testset_identifier, soi_type, interference_sig_type)

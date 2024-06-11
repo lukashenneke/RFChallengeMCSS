@@ -39,7 +39,7 @@ def main():
     cfg.model_dir = f"models/{s}_{i}_{n}ch_{m}"
     
     # Setup training
-    if m == "wavenet":
+    if m.startswith("wavenet"):
         train(cfg, SOI_Generator(s))
     else:
         raise ValueError(f'Unknown model identifier {m}')
