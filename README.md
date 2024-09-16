@@ -1,69 +1,85 @@
-# Multi Channel Signal Separation
-# Extension of the ICASSP 2024 RF Challenge for Single Channel Signal Separation
+# Multi-channel extension of the RF signal separation challenge
+Accompanying code for the paper [Extending the Single-Channel RF Signal Separation Challenge to Multi-Antenna Scenarios](#reference).
 
-Add github repo, challenge paper, challenge website, description pdf
-[Click here for details on the challenge setup](https://rfchallenge.mit.edu/icassp24-single-channel/)
+The paper is based on the [ICASSP 2024 SP Grand Challenge: Data-Driven Signal Separation in Radio Spectrum](https://signalprocessingsociety.org/publications-resources/data-challenges/data-driven-signal-separation-radio-spectrum-icassp-2024).
 
-## RF Challenge Data
-Refer to website/paper/...
+## Challenge
+Click [here](https://rfchallenge.mit.edu/icassp24-single-channel/) for details on the challenge setup.
+This GitHub repository is a fork of the challenge organizers' GitHub repository providing the [starter code](https://github.com/RFChallenge/icassp2024rfchallenge).
+The RF challenge data can be downloaded manually here: [InterferenceSet](https://www.dropbox.com/scl/fi/zlvgxlhp8het8j8swchgg/dataset.zip?rlkey=4rrm2eyvjgi155ceg8gxb5fc4&dl=0).
 
-### InterferenceSet:
-[Link to InterferenceSet](https://www.dropbox.com/scl/fi/zlvgxlhp8het8j8swchgg/dataset.zip?rlkey=4rrm2eyvjgi155ceg8gxb5fc4&dl=0)
-
-
-## Task
-
-This starter kit equips you with essential resources to develop signal separation and interference rejection solutions. In this competition, the crux of the evaluation hinges on your ability to handle provided signal mixtures. Your task will be twofold:
-
-1.  Estimate the Signal of Interest (SOI) component within the two-component mixture.
-
-2.  Deduce the best possible estimate of the underlying information bits encapsulated in the SOI.
-
-Delve into the specifics below for comprehensive details.
-
-
-## Starter Code Setup:
-Relevant bash commands to set up the starter code:
+## Setup
+The code is only tested using Python 3.8.5 and the package versions listed in `requirements.txt`.
+Relevant bash commands to set up the code:
 ```bash
-git clone https://github.com/lukashenneke/RFChallengeMCSS.git
-cd RFChallengeMCSS
+# clone this repository
+git clone https://github.com/lukashenneke/RFChallengeSCSS.git
+cd RFChallengeSCSS
 
-# To obtain the dataset
-wget -O  dataset.zip "https://www.dropbox.com/scl/fi/zlvgxlhp8het8j8swchgg/dataset.zip?rlkey=4rrm2eyvjgi155ceg8gxb5fc4&dl=0"
-unzip  dataset.zip
+# install python packages - using Python 3.8 and a virtual environment is recommended to make things work
+python install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cu116
+
+# obtain the dataset
+wget -O dataset.zip "https://www.dropbox.com/scl/fi/zlvgxlhp8het8j8swchgg/dataset.zip?rlkey=4rrm2eyvjgi155ceg8gxb5fc4&dl=0"
+unzip dataset.zip
 rm dataset.zip
 ```
 
-Dependencies: The organizers have used the following libraries to generate the signal mixtures and test the relevant baseline models
-* python==3.7.13
-* numpy==1.21.6
-* tensorflow==2.8.2
-* sionna==0.10.0
-* tqdm==4.64.0
-* h5py==3.7.0
+## Training
 
+The interface for training a signal separation model for a combination of SOI Type and Interference Type is
 
+```bash
+# start training using the config file name as identifier, 
+# e.g. 'wavenet_2ch' to refer to src/configs/wavenet_2ch.yml
+python train.py [SOI Type] [Interference Type] -id [YAML identifier]
+```
+In addition to the training settings, the antenna array geometry and the number of channels are also stored in the YAML config file.
+The config files for all antenna arrays studied in [Extending the Single-Channel RF Signal Separation Challenge to Multi-Antenna Scenarios](#reference) are placed in [src/configs](src/configs).
 
+To re-run all experiments (this will probably take weeks), run:
 
-## Helper Functions for Testing:
+```bash
+python run_training.py
+```
 
-To assist participants during testing, we provide several example scripts designed to create and test with evaluation sets analogous to TestSet1Mixture.
+To only run a subset of the experiments, delete unwanted entries in [run_training.py](run_training.py).
 
-`python sampletest_testmixture_generator.py [SOI Type] [Interference Type]`
+## Inference and evaluation
 
-This script generates a new evaluation set (default name: TestSet1Example) based on the raw interference dataset of TestSet1. Participants can employ this for cross-checking. The produced outputs include a mixture numpy array, a metadata numpy array (similar to what's given in TestSet1Mixture), and a ground truth file. Participants can also change the seed number to generate new instances of such example test sets.
+Before starting inference, the evaluation datasets "TestSet1Example", based on the raw interference dataset of TestSet1, have to be generated for all signal mixture scenarios:
+```bash
+# generate TestSet1Example for specific signal mixture scenario
+python testmixture_generator.py [SOI Type] [Interference Type]
 
-`python sampletest_torch_wavenet_inference.py [SOI Type] [Interference Type] [TestSet Identifier]`
+# generate TestSet1Example for all 8 scenarios
+python testmixture_generator.py
+```
 
-(Default: Use TestSet1Example for [TestSet Identifier])
-Scripts that leverage the supplied baseline methods (Modified U-Net on Tensorflow or WaveNet on PyTorch) for inference.
+To evaluate trained models and beamforming approaches, run:
+```bash
+# evaluate model for specific signal mixture scenario
+python inference_and_evaluation.py [Method Identifier] [SOI Type] [Interference Type]
 
-`python sampletest_evaluationscript.py [SOI Type] [Interference Type] [TestSet Identifier] [Method ID String]`
+# evaluate model for all 8 scenarios
+python inference_and_evaluation.py [Method Identifier]
+```
 
-[Method ID String] is your submission's unique identifier---refer to submission specifications.
-Utilize this script to assess the outputs generated from the inference script.
+This will save evaluation results to a *.npy file in [outputs](outputs/).
+Here, SOI demodulation without interference mitigation can be started with `[Method Identifier] = 'none'`.
+In order to use MPDR beamformers for signal separation utilizing exact steering vectors, use e.g. `[Method Identifier] = 'bf_mpdr_oracle_2ch_ULA'` for beamforming based on a 2-element Uniform Linear Array and `[Method Identifier] = 'bf_mpdr_oracle_4ch_URA'` for a 4-element Uniform Rectangular Array.
+For evaluation of all methods and signal scenarios considered in the paper (assuming all WaveNet models have been trained), solely run
+```bash
+python inference_and_evaluation.py
+```
 
-    
-2.  Model Training Scripts: The competition organizers have curated two implementations:
-    -   UNet on Tensorflow: `train_unet_model.py`, accompanied with neural network specification in `src/unet_model.py`
-    -   WaveNet on Torch: `train_torchwavenet.py`, accompanied with dependencies including `supervised_config.yml` and `src/configs`, `src/torchdataset.py`, `src/learner_torchwavenet.py`, `src/config_torchwavenet.py` and `src/torchwavenet.py`
+Finally, run 
+
+```bash
+python plot_results.py [SOI Type] [Interference Type]
+```
+
+to plot and print the results. It might be necessary to add your Method Identifier to the methods list in [plot_results.py](./plot_results.py).
+
+## Reference
+COMING SOON
