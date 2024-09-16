@@ -66,10 +66,10 @@ class WaveLearner:
         with h5py.File(self.cfg.data.val_data_dir,'r') as data_h5file:
             valid_data = np.array(data_h5file.get('dataset'))
         self.train_dataset = MultiChannelDataset(
-            self.gen, sig_data, cdt.sig_len, cdt.num_ant, cdt.batch_size*100, cdt.sinr_range, cdt.soi_aoa, fix=False
+            self.gen, sig_data, cdt.sig_len, cdt.num_ant, cdt.batch_size*1000, cdt.sinr_range, cdt.soi_aoa, fix=False, array_type=cdt.array_type
         )
         self.val_dataset = MultiChannelDataset(
-            self.gen, valid_data, cdt.sig_len, cdt.num_ant, cdt.batch_size*64, cdt.sinr_range, cdt.soi_aoa, fix=True#TODO
+            self.gen, valid_data, cdt.sig_len, cdt.num_ant, cdt.batch_size*64, cdt.sinr_range, cdt.soi_aoa, fix=True, array_type=cdt.array_type
         )
 
         self.train_dataloader = DataLoader(
@@ -213,6 +213,7 @@ def train(cfg: Config, gen):
     torch.backends.cudnn.benchmark = True
 
     model = Wave(cfg.model).cuda()
+    print('Params:', sum(p.numel() for p in model.parameters()))
 
     learner = WaveLearner(cfg, model, gen)
     learner.restore_from_checkpoint()

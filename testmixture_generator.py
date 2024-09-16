@@ -19,6 +19,8 @@ get_sinr_db = lambda s, i: get_db(get_sinr(s,i))
 sig_len = 40960
 n_per_batch = 100
 n_angles = 10
+intf_to_noise_ratio_dB = 15
+n_channels_max = 4
 all_sinr = np.arange(-30, 0.1, 3)
 
 seed_number = 0
@@ -95,6 +97,10 @@ def generate_demod_testmixture(soi_type, interference_sig_type):
     angles = np.reshape(angles, (-1, n_angles, 2, 2)) # batch, soi/interference, azimuth/elevation
     angles = np.tile(angles, (len(all_sinr), 1, 1, 1))
     angles = np.transpose(angles, (1,0,2,3))
+
+    noise = np.random.randn(all_interferences.shape[0], n_channels_max, all_interferences.shape[1], 2).astype(np.float32)/np.sqrt(2)
+    noise = noise[...,0] + 1j*noise[...,1]
+    noise *= np.sqrt(np.mean(np.abs(all_interferences)**2, axis=1) / 10**(intf_to_noise_ratio_dB/10))[:, None, None]
     
     with h5py.File(os.path.join('dataset', f'TestSet1Example_Dataset_{soi_type}_{interference_sig_type}.h5'), 'w') as hf:
         hf.create_dataset('soi_type', data=soi_type.encode('UTF-8'))
@@ -103,6 +109,7 @@ def generate_demod_testmixture(soi_type, interference_sig_type):
         hf.create_dataset('soi', data=all_sig1)
         hf.create_dataset('bits', data=all_bits1)
         hf.create_dataset('angles', data=angles)
+        hf.create_dataset('noise', data=noise)
         hf.create_dataset('meta_data', data=meta_data)
 
 if __name__ == "__main__":

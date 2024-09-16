@@ -19,24 +19,20 @@ def main():
     parser = ArgumentParser(description="Train a Diffwave model.")
     parser.add_argument("soi", type=str, default="QPSK", choices=soi, help="Index for SOI Type.")
     parser.add_argument("interference", type=str, default="CommSignal3", choices=interference, help="Index for Interference Type.")
-    parser.add_argument("nchannels", type=int, default=1, help="Number of channels/antennas.")
-    parser.add_argument("-id", "--identifier", type=str, default="wavenet", help="Number of channels/antennas.")
-    parser.add_argument("--config", type=str, default="src/configs/wavenet.yml", help="Configuration file for model.")
+    parser.add_argument("-id", "--identifier", type=str, default="wavenet", help="Configuration file name for model.")
     args = parser.parse_args()
     
     # Set config
     s = args.soi
     i = args.interference
-    n = args.nchannels
     m = args.identifier
-    cfg = OmegaConf.load(args.config)
+    cfg = OmegaConf.load(f'src/configs/{m}.yml')
     cfg = Config(**parse_configs(cfg))
     ddir = Path(cfg.data.data_dir)
     cfg.data.data_dir = str(ddir / f"interferenceset_frame/{i}_raw_data.h5")
     cfg.data.val_data_dir = str(ddir / f"testset1_frame/{i}_test1_raw_data.h5")
-    cfg.data.num_ant = n
-    cfg.model.input_channels = 2*n
-    cfg.model_dir = f"models/{s}_{i}_{n}ch_{m}"
+    cfg.model.input_channels = 2*cfg.data.num_ant
+    cfg.model_dir = f"models/{s}_{i}_{m}"
     
     # Setup training
     if m.startswith("wavenet"):

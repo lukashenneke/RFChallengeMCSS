@@ -23,7 +23,8 @@ class DataConfig:
     val_data_dir: str = MISSING
     sig_len: int = 40960
     num_ant: int = 1
-    sinr_range: List[int] = field(default_factory=lambda: [-30, 0])
+    array_type: str = 'ULA'
+    sinr_range: List[int] = field(default_factory=lambda: [-30, 3])
     soi_aoa: Optional[List[float]] = None #[np.pi/4,0] #
     batch_size: int = 16
     num_workers: int = 2
