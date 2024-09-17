@@ -27,14 +27,17 @@ rm dataset.zip
 
 ## Training
 
+The training settings, the antenna array geometry and the number of channels are set within YAML config files.
 The interface for training a signal separation model for a combination of SOI Type and Interference Type is
 
 ```bash
-# start training using the config file name as identifier, 
-# e.g. 'wavenet_2ch' to refer to src/configs/wavenet_2ch.yml
+# start training using the config file name as identifier
 python train.py [SOI Type] [Interference Type] -id [YAML identifier]
+
+# for example, we are considering signal mixtures of SOI Type OFDMQPSK and Interference Type EMISignal1
+# and the identifier 'wavenet_2ch' to refer to src/configs/wavenet_2ch.yml
+python train.py OFDMQPSK EMISignal1 -id wavenet_2ch
 ```
-In addition to the training settings, the antenna array geometry and the number of channels are also stored in the YAML config file.
 The config files for all antenna arrays studied in [Extending the Single-Channel RF Signal Separation Challenge to Multi-Antenna Scenarios](#reference) are placed in [src/configs](src/configs).
 
 To re-run all experiments (this will probably take weeks), run:
